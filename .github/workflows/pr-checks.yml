@@ -4,22 +4,51 @@ on:
   pull_request:
 
 jobs:
-  lint:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      node-modules-path: ${{ steps.set-path.outputs.path }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm ci
+      - name: Set node_modules path
+        id: set-path
+        run: echo "path=$(pwd)/node_modules" >> $GITHUB_OUTPUT
+      - name: Upload node_modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
+
+  lint:
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
       - run: npm run lint
 
   test:
+    needs: prepare
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm ci
+      - name: Download node_modules
+        uses: actions/download-artifact@v4
+        with:
+          name: node_modules
+          path: node_modules
       - run: npm run test
